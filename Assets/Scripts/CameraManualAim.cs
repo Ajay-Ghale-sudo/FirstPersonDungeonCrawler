@@ -5,9 +5,9 @@ using UnityEngine;
 
 public class CameraManualAim : MonoBehaviour
 {
-    public Camera camera;
 
     public float Sensitivity { get { return sensitivity; } set { sensitivity = value; }}
+    private PlayerMovement playermovement;
 
     [Header("Camera settings.")]
     [Range(0.1f, 9f)][SerializeField] 
@@ -16,6 +16,9 @@ public class CameraManualAim : MonoBehaviour
     [Tooltip("Limits vertical camera rotation. Prevents 6DOF that happens when rotation goes above 90.")]
     [Range(0f, 90f)][SerializeField] 
     public float yRotationLimit = 88f;
+    [Tooltip("Amount of zoom that should be applied when freeaim is started.")]
+    [Range(0, 10)][SerializeField]
+    public float zoomAmount = 5f;
 
     [Tooltip("Enables camera smoothing.")]
     public bool useSmoothing;
@@ -25,6 +28,11 @@ public class CameraManualAim : MonoBehaviour
     private Quaternion newQuatRotation;
     const string xAxis = "Mouse X";
     const string yAxis = "Mouse Y";
+
+    private void Awake()
+    {
+        playermovement = GetComponentInParent<PlayerMovement>();
+    }
 
     public void Freelook() { isFreelooking = true; print("Started freelooking."); }
     public void StopFreelooking() { isFreelooking = false; print("Stopped freelooking."); OrientToNearestCardinalDirection(); }
@@ -37,7 +45,7 @@ public class CameraManualAim : MonoBehaviour
         }
         if (!isFreelooking)
         {
-            currentRotation = camera.transform.localRotation;
+            currentRotation = transform.localRotation;
         }
 
     }
@@ -55,11 +63,11 @@ public class CameraManualAim : MonoBehaviour
         if (useSmoothing)
         {
             // Smoothing can cause camera to rotate on Z axis.
-            camera.transform.localRotation = Quaternion.Lerp(currentRotation, newRotation, Time.deltaTime * sensitivity);
+            transform.localRotation = Quaternion.Lerp(currentRotation, newRotation, Time.deltaTime * sensitivity);
         }
         else
         {
-            camera.transform.localRotation = newRotation;
+            transform.localRotation = newRotation;
             currentRotation = newRotation;
         }
     }
@@ -70,22 +78,23 @@ public class CameraManualAim : MonoBehaviour
         Vector3 currentEulerAngles = currentRotation.eulerAngles;
         float newYawAngle = Mathf.Round(currentEulerAngles.y / 90) * 90;
         newQuatRotation = Quaternion.Euler(0, newYawAngle, 0);
-        StartCoroutine(SmoothRotateToCardinalDirection(newQuatRotation));        
+
+        StartCoroutine(SmoothRotateToCardinalDirection(newQuatRotation));
 
     }
     private IEnumerator SmoothRotateToCardinalDirection(Quaternion targetRotation)
     {
-        Quaternion startRotation = camera.transform.localRotation;
+        Quaternion startRotation = transform.localRotation;
         float elapsedTime = 0f;
         float interpolationDuration = 0.2f;
         while (elapsedTime < interpolationDuration)
         {
             float interpolationValue = elapsedTime / interpolationDuration;
-            camera.transform.localRotation = Quaternion.Slerp(startRotation, targetRotation, interpolationValue);
+            transform.localRotation = Quaternion.Slerp(startRotation, targetRotation, interpolationValue);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-        camera.transform.localRotation = targetRotation;
+        transform.localRotation = targetRotation;
         currentRotation = targetRotation;
         rotation.x = newQuatRotation.eulerAngles.y;
         rotation.y = newQuatRotation.eulerAngles.x;
